@@ -24,9 +24,19 @@ public:
     int GetNumColumn();
     double GetVal(int x, int y);
 
-    Matrix Cor(Matrix& mat, int method);
-    // Matrix SimpleLinearRegression(const Matrix& X, const Matrix& Y);
+    void Set(int i, int j, double val);
+    std::vector<double> nx1_vector_converter() const;
+    void SetnumRow(int x);
+    void SetnumCol(int x);
+    void Setmatrix(const std::vector<std::vector<double>>& matrix_);
 };
+
+int Sign(double x);
+double PearsonCorrelation(const std::vector<double>& x, const std::vector<double>& y);
+double KendallTau(const std::vector<double>& x, const std::vector<double>& y);
+
+Matrix Cor(Matrix& mat, int method);
+//Matrix SimpleLinearRegression(const Matrix& X, const Matrix& Y);
 
 class DataFrame : public Matrix{
 private:
