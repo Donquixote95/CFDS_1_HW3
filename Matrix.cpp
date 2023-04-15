@@ -215,8 +215,7 @@ double Matrix::GetVal(int x, int y){
     // 예외 처리
     if (x < 0 || x >= this->numRow || y < 0 || y >= this->numCol) {
         throw std::out_of_range("Invalid indices");
-    }
-    
+    }   
     return this->matrix[x][y];
 }
 
@@ -224,51 +223,39 @@ void Matrix::Set(int x, int y, double val){
     this->matrix[x][y] = val;
 }
 
-Matrix Matrix::Cor(Matrix &mat, int method = 1) {
-    // 결과값으로 출력할 m X m matrix 만들기. 원소는 대각은 1, 나머지는 0으로 초기화
-    int n = mat.GetNumRow();
-    int m = mat.GetNumColumn();
-    Matrix corr;
-        vector<vector<double>> temp(m, vector<double>(m, 0.0));
-        for (int k=0; k < m; k++){
-            temp[k][k] = 1;
-        }
-        corr.matrix = temp;
-        corr.numRow = m;
-        corr.numCol = m;
-
-    for (int i = 0; i < m; i++) {
-        for (int j = i + 1; j < m; j++) {
-            double corrCoeff = 0.0;
-            // Pearson correlation
-            if (method == 1) {
-                corrCoeff = PearsonCorrelation(mat.GetColumn(i), mat.GetColumn(j));
-            }
-            // Kendall's tau 
-            else if (method == 2) {
-                corrCoeff = KendallTau(mat.GetColumn(i), mat.GetColumn(j));
-            }
-            // correlation matrix는 symmetric이기 때문에 이렇게 만들어줘야 한다.
-            corr.Set(i, j, corrCoeff);
-            corr.Set(j, i, corrCoeff);
-        }
+double Mean(const Vector& x){
+    double sum = 0.0;
+    for (double val : x){
+        sum += val;
     }
-
-    return corr;
+    return sum / x.size();
 }
 
-double PearsonCorrelation(const Vector& x, const Vector& y) {
-    double meanX = x.Mean();
-    double meanY = y.Mean();
-    double stdX = x.StdDev();
-    double stdY = y.StdDev();
+double StdDev(const Vector& x){
+    double mean = Mean(x);
+    double sumSqDiff = 0.0;
+    for (double val : x) {
+        double diff = val - mean;
+        sumSqDiff += diff * diff;
+    }
+    double variance = sumSqDiff / x.size();
+    return std::sqrt(variance);
+}
+
+double Matrix::PearsonCorrelation(const Vector& x, const Vector& y) {
+    double meanX = Mean(x);
+    double meanY = Mean(y);
+    double stdX = StdDev(x);
+    double stdY = StdDev(y);
+    // scalar-vector substraction
     double covariance = (x - meanX) * (y - meanY);
     double corrCoeff = covariance / (stdX * stdY);
     return corrCoeff;
 }
 
-double KendallTau(const Vector& x, const Vector& y) {
-    int n = x.Size();
+double Matrix::KendallTau(const Vector& x, const Vector& y) {
+    int n = x.size();
+    // binomial coefficient for the number of ways to choose two items from n items
     int numPairs = n * (n - 1) / 2;
     int numConcordant = 0;
     int numDiscordant = 0;
@@ -289,14 +276,42 @@ double KendallTau(const Vector& x, const Vector& y) {
     return tau;
 }
 
-int Sign(double x) {
-    if (x > 0) {
-        return 1;
-    } else if (x < 0) {
-        return -1;
-    } else {
-        return 0;
+int Matrix::Sign(double x) {
+    if (x > 0) {return 1;} 
+    else if (x < 0) {return -1;} 
+    else {return 0;}
+}
+
+Matrix Matrix::Cor(Matrix &mat, int method = 1) {
+    // 결과값으로 출력할 m X m matrix 만들기. 원소는 대각은 1, 나머지는 0으로 초기화
+    int n = mat.GetNumRow();
+    int m = mat.GetNumColumn();
+    Matrix corr;
+        vector<vector<double>> temp(m, vector<double>(m, 0.0));
+        for (int k=0; k < m; k++){
+            temp[k][k] = 1;
+        }
+        corr.matrix = temp;
+        corr.numRow = m;
+        corr.numCol = m;
+
+    for (int i = 0; i < m; i++) {
+        for (int j = i + 1; j < m; j++) {
+            double corrCoeff = 0.0;
+            // Pearson correlation
+            if (method == 1) {
+                corrCoeff = PearsonCorrelation(mat.GetSubVectorbyColumn.matrix(i), mat.GetSubVectorbyColumn.matrix(j));
+            }
+            // Kendall's tau 
+            else if (method == 2) {
+                corrCoeff = KendallTau(mat.GetSubVectorbyColumn.matrix(i), mat.GetSubVectorbyColumn.matrix(j));
+            }
+            // correlation matrix는 symmetric이기 때문에 이렇게 만들어줘야 한다.
+            corr.Set(i, j, corrCoeff);
+            corr.Set(j, i, corrCoeff);
+        }
     }
+    return corr;
 }
 
 // Matrix Matrix::SimpleLinearRegression(Matrix &X, Matrix &Y) {
