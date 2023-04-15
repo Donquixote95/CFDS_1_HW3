@@ -223,7 +223,31 @@ void Matrix::Set(int x, int y, double val){
     this->matrix[x][y] = val;
 }
 
-double Mean(const Vector& x){
+std::vector<double> Matrix::nx1_vector_converter() const{
+    // 예외 처리, nX1 matrix만 받아야 한다.
+    if (this->numCol != 1){
+        cout<<"Please Input nX1 matrix."<<endl;
+    }
+    std::vector<double> result;
+    for (int i=0; i < this->numRow; i++){
+        result.push_back(this->matrix[i][0]);
+    }
+    return result;
+}
+
+void Matrix::SetnumRow(int x){
+    this->numRow = x;
+}
+
+void Matrix::SetnumCol(int x)
+{
+    this->numCol = x;
+}
+void Matrix::Setmatrix(const std::vector<std::vector<double>>& matrix_){
+    this->matrix = matrix_;
+}
+
+double Mean(const vector<double>& x){
     double sum = 0.0;
     for (double val : x){
         sum += val;
@@ -231,7 +255,7 @@ double Mean(const Vector& x){
     return sum / x.size();
 }
 
-double StdDev(const Vector& x){
+double StdDev(const vector<double>& x){
     double mean = Mean(x);
     double sumSqDiff = 0.0;
     for (double val : x) {
@@ -242,18 +266,28 @@ double StdDev(const Vector& x){
     return std::sqrt(variance);
 }
 
-double Matrix::PearsonCorrelation(const Vector& x, const Vector& y) {
+int Sign(double x) {
+    if (x > 0) {return 1;} 
+    else if (x < 0) {return -1;} 
+    else {return 0;}
+}
+
+double PearsonCorrelation(const vector<double>& x, const vector<double>& y) {
     double meanX = Mean(x);
     double meanY = Mean(y);
     double stdX = StdDev(x);
     double stdY = StdDev(y);
-    // scalar-vector substraction
-    double covariance = (x - meanX) * (y - meanY);
+    // scalar-vector substraction이 안 돼서 for 문으로 구현.. 
+    // double covariance = (x - meanX) * (y - meanY);이 왜 안 될까..
+    double covariance = 0.0;
+    for (int i = 0; i < x.size(); i++) {
+        covariance += (x[i] - meanX) * (y[i] - meanY);
+    }
     double corrCoeff = covariance / (stdX * stdY);
     return corrCoeff;
 }
 
-double Matrix::KendallTau(const Vector& x, const Vector& y) {
+double KendallTau(const vector<double>& x, const vector<double>& y) {
     int n = x.size();
     // binomial coefficient for the number of ways to choose two items from n items
     int numPairs = n * (n - 1) / 2;
@@ -271,18 +305,11 @@ double Matrix::KendallTau(const Vector& x, const Vector& y) {
             }
         }
     }
-
     double tau = (double)(numConcordant - numDiscordant) / (double)numPairs;
     return tau;
 }
 
-int Matrix::Sign(double x) {
-    if (x > 0) {return 1;} 
-    else if (x < 0) {return -1;} 
-    else {return 0;}
-}
-
-Matrix Matrix::Cor(Matrix &mat, int method = 1) {
+Matrix Cor(Matrix &mat, int method = 1) {
     // 결과값으로 출력할 m X m matrix 만들기. 원소는 대각은 1, 나머지는 0으로 초기화
     int n = mat.GetNumRow();
     int m = mat.GetNumColumn();
@@ -291,20 +318,22 @@ Matrix Matrix::Cor(Matrix &mat, int method = 1) {
         for (int k=0; k < m; k++){
             temp[k][k] = 1;
         }
-        corr.matrix = temp;
-        corr.numRow = m;
-        corr.numCol = m;
+        corr.Setmatrix(temp);
+        corr.SetnumCol(m);
+        corr.SetnumRow(m);
 
     for (int i = 0; i < m; i++) {
         for (int j = i + 1; j < m; j++) {
             double corrCoeff = 0.0;
             // Pearson correlation
             if (method == 1) {
-                corrCoeff = PearsonCorrelation(mat.GetSubVectorbyColumn.matrix(i), mat.GetSubVectorbyColumn.matrix(j));
+                corrCoeff = PearsonCorrelation(mat.GetSubVectorbyColumn(i).nx1_vector_converter(), 
+                                            mat.GetSubVectorbyColumn(j).nx1_vector_converter());
             }
             // Kendall's tau 
             else if (method == 2) {
-                corrCoeff = KendallTau(mat.GetSubVectorbyColumn.matrix(i), mat.GetSubVectorbyColumn.matrix(j));
+                corrCoeff = KendallTau(mat.GetSubVectorbyColumn(i).nx1_vector_converter(), 
+                                    mat.GetSubVectorbyColumn(j).nx1_vector_converter());
             }
             // correlation matrix는 symmetric이기 때문에 이렇게 만들어줘야 한다.
             corr.Set(i, j, corrCoeff);
@@ -324,54 +353,3 @@ Matrix Matrix::Cor(Matrix &mat, int method = 1) {
 //     Matrix beta = XtX.Inverse().Multiply(XtY);
 //     return beta;
 // }
-
-
-    // // Calculate means and standard deviations of columns
-    // vector<double> means(m);
-    // vector<double> sds(m);
-    // for (int j = 0; j < m; j++) {
-    //     double sum = 0;
-    //     double sum_sq = 0;
-    //     for (int i = 0; i < n; i++) {
-    //         sum += mat.GetVal(i, j);
-    //         sum_sq += pow(mat.GetVal(i, j), 2);
-    //     }
-    //     means[j] = sum / n;                             // Mean of the 'j'-th column values
-    //     sds[j] = sqrt(sum_sq / n - pow(means[j], 2));
-    // }
-
-    // // Calculate correlation coefficients
-    // for (int i = 0; i < m; i++) {
-    //     for (int j = 0; j < m; j++) {
-    //         double numerator = 0;
-    //         double denominator1 = 0;
-    //         double denominator2 = 0;
-    //         for (int k = 0; k < n; k++) {
-    //             numerator += (mat.GetVal(k, i) - means[i]) * (mat.GetVal(k, j) - means[j]);
-    //             denominator1 += pow(mat.GetVal(k, i) - means[i], 2);
-    //             denominator2 += pow(mat.GetVal(k, j) - means[j], 2);
-    //         }
-    //         if (method == 1) {
-    //             res.SetVal(i, j, numerator / (sqrt(denominator1) * sqrt(denominator2)));
-    //         } else if (method == 2) {
-    //             int concordant_pairs = 0;
-    //             int discordant_pairs = 0;
-    //             for (int p = 0; p < n; p++) {
-    //                 for (int q = p + 1; q < n; q++) {
-    //                     if ((mat.GetVal(p, i) < mat.GetVal(q, i) && mat.GetVal(p, j) < mat.GetVal(q, j)) ||
-    //                         (mat.GetVal(p, i) > mat.GetVal(q, i) && mat.GetVal(p, j) > mat.GetVal(q, j))) {
-    //                         concordant_pairs++;
-    //                     } else if ((mat.GetVal(p, i) < mat.GetVal(q, i) && mat.GetVal(p, j) > mat.GetVal(q, j)) ||
-    //                                (mat.GetVal(p, i) > mat.GetVal(q, i) && mat.GetVal(p, j) < mat.GetVal(q, j))) {
-    //                         discordant_pairs++;
-    //                     }
-    //                 }
-    //             }
-    //             double tau = (concordant_pairs - discordant_pairs) 
-    //                         / sqrt((concordant_pairs + discordant_pairs) 
-    //                         * (n * (n - 1) / 2 - concordant_pairs - discordant_pairs));
-    //             res.SetVal(i, j, tau);
-    //         }
-    //     }
-    //     res.SetVal(i, i, 1);
-    // }
