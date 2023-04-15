@@ -211,7 +211,7 @@ int Matrix::GetNumRow(){return numRow;}
 
 int Matrix::GetNumColumn(){return numCol;}
 
-double Matrix::GetVal(int x, int y) {
+double Matrix::GetVal(int x, int y){
     // 예외 처리
     if (x < 0 || x >= this->numRow || y < 0 || y >= this->numCol) {
         throw std::out_of_range("Invalid indices");
@@ -220,61 +220,83 @@ double Matrix::GetVal(int x, int y) {
     return this->matrix[x][y];
 }
 
+void Matrix::Set(int x, int y, double val){
+    this->matrix[x][y] = val;
+}
+
 Matrix Matrix::Cor(Matrix &mat, int method = 1) {
+    // 결과값으로 출력할 m X m matrix 만들기. 원소는 대각은 1, 나머지는 0으로 초기화
     int n = mat.GetNumRow();
     int m = mat.GetNumColumn();
-    Matrix res(m, m);
-
-    // Calculate means and standard deviations of columns
-    vector<double> means(m);
-    vector<double> sds(m);
-    for (int j = 0; j < m; j++) {
-        double sum = 0;
-        double sum_sq = 0;
-        for (int i = 0; i < n; i++) {
-            sum += mat.GetVal(i, j);
-            sum_sq += pow(mat.GetVal(i, j), 2);
+    Matrix corr;
+        vector<vector<double>> temp(m, vector<double>(m, 0.0));
+        for (int k=0; k < m; k++){
+            temp[k][k] = 1;
         }
-        means[j] = sum / n;
-        sds[j] = sqrt(sum_sq / n - pow(means[j], 2));
-    }
+        corr.matrix = temp;
+        corr.numRow = m;
+        corr.numCol = m;
 
-    // Calculate correlation coefficients
     for (int i = 0; i < m; i++) {
-        for (int j = 0; j < m; j++) {
-            double numerator = 0;
-            double denominator1 = 0;
-            double denominator2 = 0;
-            for (int k = 0; k < n; k++) {
-                numerator += (mat.GetVal(k, i) - means[i]) * (mat.GetVal(k, j) - means[j]);
-                denominator1 += pow(mat.GetVal(k, i) - means[i], 2);
-                denominator2 += pow(mat.GetVal(k, j) - means[j], 2);
-            }
+        for (int j = i + 1; j < m; j++) {
+            double corrCoeff = 0.0;
+            // Pearson correlation
             if (method == 1) {
-                res.SetVal(i, j, numerator / (sqrt(denominator1) * sqrt(denominator2)));
-            } else if (method == 2) {
-                int concordant_pairs = 0;
-                int discordant_pairs = 0;
-                for (int p = 0; p < n; p++) {
-                    for (int q = p + 1; q < n; q++) {
-                        if ((mat.GetVal(p, i) < mat.GetVal(q, i) && mat.GetVal(p, j) < mat.GetVal(q, j)) ||
-                            (mat.GetVal(p, i) > mat.GetVal(q, i) && mat.GetVal(p, j) > mat.GetVal(q, j))) {
-                            concordant_pairs++;
-                        } else if ((mat.GetVal(p, i) < mat.GetVal(q, i) && mat.GetVal(p, j) > mat.GetVal(q, j)) ||
-                                   (mat.GetVal(p, i) > mat.GetVal(q, i) && mat.GetVal(p, j) < mat.GetVal(q, j))) {
-                            discordant_pairs++;
-                        }
-                    }
-                }
-                double tau = (concordant_pairs - discordant_pairs) 
-                            / sqrt((concordant_pairs + discordant_pairs) 
-                            * (n * (n - 1) / 2 - concordant_pairs - discordant_pairs));
-                res.SetVal(i, j, tau);
+                corrCoeff = PearsonCorrelation(mat.GetColumn(i), mat.GetColumn(j));
+            }
+            // Kendall's tau 
+            else if (method == 2) {
+                corrCoeff = KendallTau(mat.GetColumn(i), mat.GetColumn(j));
+            }
+            // correlation matrix는 symmetric이기 때문에 이렇게 만들어줘야 한다.
+            corr.Set(i, j, corrCoeff);
+            corr.Set(j, i, corrCoeff);
+        }
+    }
+
+    return corr;
+}
+
+double PearsonCorrelation(const Vector& x, const Vector& y) {
+    double meanX = x.Mean();
+    double meanY = y.Mean();
+    double stdX = x.StdDev();
+    double stdY = y.StdDev();
+    double covariance = (x - meanX) * (y - meanY);
+    double corrCoeff = covariance / (stdX * stdY);
+    return corrCoeff;
+}
+
+double KendallTau(const Vector& x, const Vector& y) {
+    int n = x.Size();
+    int numPairs = n * (n - 1) / 2;
+    int numConcordant = 0;
+    int numDiscordant = 0;
+
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            int xSign = Sign(x[j] - x[i]);
+            int ySign = Sign(y[j] - y[i]);
+            if (xSign == ySign) {
+                numConcordant++;
+            } else {
+                numDiscordant++;
             }
         }
-        res.SetVal(i, i, 1);
     }
-    return res;
+
+    double tau = (double)(numConcordant - numDiscordant) / (double)numPairs;
+    return tau;
+}
+
+int Sign(double x) {
+    if (x > 0) {
+        return 1;
+    } else if (x < 0) {
+        return -1;
+    } else {
+        return 0;
+    }
 }
 
 // Matrix Matrix::SimpleLinearRegression(Matrix &X, Matrix &Y) {
@@ -287,3 +309,54 @@ Matrix Matrix::Cor(Matrix &mat, int method = 1) {
 //     Matrix beta = XtX.Inverse().Multiply(XtY);
 //     return beta;
 // }
+
+
+    // // Calculate means and standard deviations of columns
+    // vector<double> means(m);
+    // vector<double> sds(m);
+    // for (int j = 0; j < m; j++) {
+    //     double sum = 0;
+    //     double sum_sq = 0;
+    //     for (int i = 0; i < n; i++) {
+    //         sum += mat.GetVal(i, j);
+    //         sum_sq += pow(mat.GetVal(i, j), 2);
+    //     }
+    //     means[j] = sum / n;                             // Mean of the 'j'-th column values
+    //     sds[j] = sqrt(sum_sq / n - pow(means[j], 2));
+    // }
+
+    // // Calculate correlation coefficients
+    // for (int i = 0; i < m; i++) {
+    //     for (int j = 0; j < m; j++) {
+    //         double numerator = 0;
+    //         double denominator1 = 0;
+    //         double denominator2 = 0;
+    //         for (int k = 0; k < n; k++) {
+    //             numerator += (mat.GetVal(k, i) - means[i]) * (mat.GetVal(k, j) - means[j]);
+    //             denominator1 += pow(mat.GetVal(k, i) - means[i], 2);
+    //             denominator2 += pow(mat.GetVal(k, j) - means[j], 2);
+    //         }
+    //         if (method == 1) {
+    //             res.SetVal(i, j, numerator / (sqrt(denominator1) * sqrt(denominator2)));
+    //         } else if (method == 2) {
+    //             int concordant_pairs = 0;
+    //             int discordant_pairs = 0;
+    //             for (int p = 0; p < n; p++) {
+    //                 for (int q = p + 1; q < n; q++) {
+    //                     if ((mat.GetVal(p, i) < mat.GetVal(q, i) && mat.GetVal(p, j) < mat.GetVal(q, j)) ||
+    //                         (mat.GetVal(p, i) > mat.GetVal(q, i) && mat.GetVal(p, j) > mat.GetVal(q, j))) {
+    //                         concordant_pairs++;
+    //                     } else if ((mat.GetVal(p, i) < mat.GetVal(q, i) && mat.GetVal(p, j) > mat.GetVal(q, j)) ||
+    //                                (mat.GetVal(p, i) > mat.GetVal(q, i) && mat.GetVal(p, j) < mat.GetVal(q, j))) {
+    //                         discordant_pairs++;
+    //                     }
+    //                 }
+    //             }
+    //             double tau = (concordant_pairs - discordant_pairs) 
+    //                         / sqrt((concordant_pairs + discordant_pairs) 
+    //                         * (n * (n - 1) / 2 - concordant_pairs - discordant_pairs));
+    //             res.SetVal(i, j, tau);
+    //         }
+    //     }
+    //     res.SetVal(i, i, 1);
+    // }
