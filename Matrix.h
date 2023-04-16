@@ -29,14 +29,17 @@ public:
     void SetnumRow(int x);
     void SetnumCol(int x);
     void Setmatrix(const std::vector<std::vector<double>>& matrix_);
+    std::vector<std::vector<double>> acces_matrix();
+
+    // Matrix inverse() const;
 };
 
 int Sign(double x);
 double PearsonCorrelation(const std::vector<double>& x, const std::vector<double>& y);
 double KendallTau(const std::vector<double>& x, const std::vector<double>& y);
 
-Matrix Cor(Matrix& mat, int method);
-//Matrix SimpleLinearRegression(const Matrix& X, const Matrix& Y);
+Matrix Cor(Matrix& mat, int method = 1);
+Matrix SimpleLinearRegression(const Matrix& X, const Matrix& Y);
 
 class DataFrame : public Matrix{
 private:
