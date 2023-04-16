@@ -267,9 +267,9 @@ double StdDev(const vector<double>& x){
 }
 
 int Sign(double x) {
-    if (x > 0) {return 1;} 
-    else if (x < 0) {return -1;} 
-    else {return 0;}
+    if (x > 0 || x == 0) {return 1;}          // concordant
+    else if (x < 0) {return -1;}    // disconcordant
+    else {return 0;}                // irrelevent
 }
 
 double PearsonCorrelation(const vector<double>& x, const vector<double>& y) {
@@ -277,28 +277,29 @@ double PearsonCorrelation(const vector<double>& x, const vector<double>& y) {
     double meanY = Mean(y);
     double stdX = StdDev(x);
     double stdY = StdDev(y);
-    // scalar-vector substraction이 안 돼서 for 문으로 구현.. 
-    // double covariance = (x - meanX) * (y - meanY);이 왜 안 될까..
+    // scalar-vector substraction이 안 돼서 for 문으로 구현했다. 그런데 왜 안 되는 걸까?
+    vector<double>covariance_vector;
     double covariance = 0.0;
     for (int i = 0; i < x.size(); i++) {
-        covariance += (x[i] - meanX) * (y[i] - meanY);
+        covariance_vector.push_back((x[i] - meanX) * (y[i] - meanY));
     }
+    covariance = Mean(covariance_vector);
     double corrCoeff = covariance / (stdX * stdY);
     return corrCoeff;
 }
 
 double KendallTau(const vector<double>& x, const vector<double>& y) {
-    int n = x.size();
     // binomial coefficient for the number of ways to choose two items from n items
-    int numPairs = n * (n - 1) / 2;
-    int numConcordant = 0;
-    int numDiscordant = 0;
+    int n = x.size();
+    int numPairs = (n * (n - 1) / 2);
+    int numConcordant = 0; // the number of concordant pairs
+    int numDiscordant = 0; // the number of disconcordant pairs
 
     for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
             int xSign = Sign(x[j] - x[i]);
             int ySign = Sign(y[j] - y[i]);
-            if (xSign == ySign) {
+            if ((xSign == ySign) || (x[i] == x[j]) || (y[i] == y[j])){
                 numConcordant++;
             } else {
                 numDiscordant++;
@@ -309,8 +310,9 @@ double KendallTau(const vector<double>& x, const vector<double>& y) {
     return tau;
 }
 
-Matrix Cor(Matrix &mat, int method = 1) {
+Matrix Cor(Matrix &mat, int method) {
     // 결과값으로 출력할 m X m matrix 만들기. 원소는 대각은 1, 나머지는 0으로 초기화
+    // Member function이 아니라서 private 변수에 접근하기 위해 helper 함수를 다 만들었다.
     int n = mat.GetNumRow();
     int m = mat.GetNumColumn();
     Matrix corr;
@@ -335,21 +337,29 @@ Matrix Cor(Matrix &mat, int method = 1) {
                 corrCoeff = KendallTau(mat.GetSubVectorbyColumn(i).nx1_vector_converter(), 
                                     mat.GetSubVectorbyColumn(j).nx1_vector_converter());
             }
+            else {
+                throw std::invalid_argument("Invalid method argument");
+            }            
             // correlation matrix는 symmetric이기 때문에 이렇게 만들어줘야 한다.
             corr.Set(i, j, corrCoeff);
             corr.Set(j, i, corrCoeff);
         }
     }
     return corr;
-}
+}   
 
-// Matrix Matrix::SimpleLinearRegression(Matrix &X, Matrix &Y) {
-//     int n = X.GetNumRow();
-//     Matrix ones(n, 1, 1.0);
-//     Matrix X_with_ones = ones.AppendMatrix(X);
-//     Matrix X_transpose = X_with_ones.Transpose();
-//     Matrix XtX = X_transpose.Multiply(X_with_ones);
-//     Matrix XtY = X_transpose.Multiply(Y);
-//     Matrix beta = XtX.Inverse().Multiply(XtY);
-//     return beta;
-// }
+Matrix SimpleLinearRegression(Matrix &X, Matrix &Y) {
+    // create a matrix A with two columns: X and a column of ones for the intercept term
+    Matrix A(X.numRow, 2);
+    A.SetnumCol(2)
+    
+    for (int i = 0; i < X.numRow; i++) {
+        A(i, 0) = X(i, 0);
+        A(i, 1) = 1;
+    }
+
+    // compute the coefficients beta using the formula beta = (A^T A)^(-1) A^T Y
+    Matrix beta = (A.transpose() * A).inverse() * A.transpose() * Y;
+
+    return beta;
+}
