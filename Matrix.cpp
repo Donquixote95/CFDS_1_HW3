@@ -348,18 +348,59 @@ Matrix Cor(Matrix &mat, int method) {
     return corr;
 }   
 
-Matrix SimpleLinearRegression(Matrix &X, Matrix &Y) {
-    // create a matrix A with two columns: X and a column of ones for the intercept term
-    Matrix A(X.numRow, 2);
-    A.SetnumCol(2)
-    
-    for (int i = 0; i < X.numRow; i++) {
-        A(i, 0) = X(i, 0);
-        A(i, 1) = 1;
-    }
+std::vector<std::vector<double>> Matrix::acces_matrix(){
+    return this->matrix;
+}
 
-    // compute the coefficients beta using the formula beta = (A^T A)^(-1) A^T Y
-    Matrix beta = (A.transpose() * A).inverse() * A.transpose() * Y;
+Matrix SimpleLinearRegression(const Matrix &X, const Matrix &Y) {
+    Matrix beta;
+    beta.SetnumRow(1);
+    beta.SetnumCol(2);
+    vector<vector<double>> temp;
+
+    double beta_0 = 0.0;
+    double beta_1 = 0.0;
+    vector<double> vector_x;
+    vector<double> vector_y;
+    vector_x = X.nx1_vector_converter();
+    vector_y = Y.nx1_vector_converter();
+    double beta_1_denominator;
+    beta_1_denominator = pow(StdDev(vector_x),2)*(vector_x.size());
+    double beta_1_numerator = 0.0;
+    for (int i = 0; i < vector_x.size(); i++) {
+        double diff = (vector_x[i] - Mean(vector_x))*(vector_y[i] - Mean(vector_y));
+        beta_1_numerator += diff;
+    }
+    beta_1 = beta_1_numerator / beta_1_denominator;
+    beta_0 = Mean(vector_y) - (beta_1*Mean(vector_x));
+
+    vector<double> beta_0_;
+    beta_0_.push_back(beta_0);
+    vector<double> beta_1_;
+    beta_1_.push_back(beta_1);
+    temp.push_back(beta_0_);
+    temp.push_back(beta_1_);
+
+    beta.Setmatrix(temp);
 
     return beta;
 }
+
+
+    // create a matrix A with two columns: X and a column of ones for the intercept term
+    // Matrix A;
+    // A = X.zero_maker(X);
+    // A.SetnumCol(2);
+    // A.SetnumRow(X.GetNumRow());
+    // std::vector<std::vector<double>> temp;
+    // temp = A.acces_matrix();
+    
+    // for (int i = 0; i < X.GetNumRow(); i++) {
+    //     temp[i][0] = X.acces_matrix()[i][0];
+    //     temp[i][1] = 1;
+    // }
+    // A.Setmatrix(temp);
+
+    // compute the coefficients beta using the formula beta = (A^T A)^(-1) A^T Y
+    // Matrix beta = (A.Transpose() * A).inverse() * A.Transpose() * Y;
+    // inverse() function을 구현하면 위 식으로 간단하게 구할 수 있는데.. inverse() function을 구현하기 어렵다.
